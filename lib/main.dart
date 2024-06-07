@@ -1,63 +1,44 @@
+import 'dart:html';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
-
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget
-{
-  const MyApp({super.key});
-
-  // This widget is the root of your application.
-  @override
-  Widget build(BuildContext context)
-  {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: ImageGridSelectorExample(),
-    );
-  }
-}
-
-class ImageGridSelectorExample extends StatelessWidget {
-  const ImageGridSelectorExample({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      body: SafeArea(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: GridView(
-
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3, crossAxisSpacing: 16),
-          children: [
-            Image.network('https://picsum.photos/id/0/5000/3333'),
-            Image.network('https://picsum.photos/id/1/5000/3333'),
-            Image.network('https://picsum.photos/id/2/5000/3333'),
-            Image.network('https://picsum.photos/id/3/5000/3333'),
-            Image.network('https://picsum.photos/id/4/5000/3333'),
-            Image.network('https://picsum.photos/id/7/4728/3168'),
-            Image.network('https://picsum.photos/id/10/2500/1667'),
-            Image.network('https://picsum.photos/id/11/2500/1667'),
-            Image.network('https://picsum.photos/id/12/2500/1667'),
-            Image.network('https://picsum.photos/id/13/2500/1667'),
-
-          ],
-
-        ),
-      ),
-    );
-  }
-}
-
+import 'package:fluttertoast/fluttertoast.dart';
+void main() {runApp(MyApp());}
+class MyApp extends StatelessWidget {
+  @override Widget build(BuildContext context) {
+    return MaterialApp(title: 'File Size Classifier',
+      theme: ThemeData(primarySwatch: Colors.blue,),
+      home: FileSelectorScreen(),);}}
+class FileSelectorScreen extends StatefulWidget { @override
+  _FileSelectorScreenState createState() => _FileSelectorScreenState();}
+class _FileSelectorScreenState extends State<FileSelectorScreen> {
+  List<Uint8List> _selectedFiles = [];
+  Future<void> _pickFiles() async {
+    final input = FileUploadInputElement()..multiple = true;
+    input.click();
+    input.onChange.listen((e) async {
+      final files = input.files;
+      if (files != null && files.isNotEmpty) {
+        List<Uint8List> filesBytes = [];
+        for (var file in files) {filesBytes.add(await _readFileAsBytes(file));}
+        filesBytes.sort((a, b) => a.length - b.length);
+        setState(() {_selectedFiles = filesBytes;
+        });for (Uint8List fileBytes in _selectedFiles) {
+          showFileSize(fileBytes);}}});}
+  Future<Uint8List> _readFileAsBytes(File file) async {
+    final reader = FileReader(); reader.readAsArrayBuffer(file);
+    await reader.onLoad.first; return reader.result as Uint8List;}
+  void showFileSize(Uint8List fileBytes) {
+    int sizeInBytes = fileBytes.length;double sizeInMB = sizeInBytes / (1024 * 1024);
+    String message = 'Size: ${sizeInMB.toStringAsFixed(2)} MB';
+    Fluttertoast.showToast(msg: message, backgroundColor: sizeInMB > 10 ? Colors.red : Colors.green,);
+    print(message);}
+  @override Widget build(BuildContext context) {
+    return Scaffold(appBar: AppBar(title: Text('File Size Classifier'),),
+      body: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center,
+          children: [ElevatedButton(onPressed: _pickFiles,
+              child: Text('Pick Files'),),SizedBox(height: 20),
+            Text('Uploaded Files:', style: TextStyle(fontWeight: FontWeight.bold),
+            ), SizedBox(height: 10), Expanded(child: ListView.builder(
+                itemCount: _selectedFiles.length, itemBuilder: (context, index) {return ListTile(title: Text(
+                        'File ${index + 1} - Size: ${(_selectedFiles[index].length / (1024 * 1024)).toStringAsFixed(2)} MB'),
+                  );},),),],),),);}}
